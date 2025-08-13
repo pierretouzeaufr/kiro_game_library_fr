@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -168,8 +169,8 @@ func SetupRoutes(router *gin.Engine, db *database.DB) error {
                         <ol class="list-decimal list-inside space-y-2 text-sm text-gray-700">
                             <li>Sélectionner un utilisateur actif</li>
                             <li>Choisir un jeu disponible</li>
+                            <li>Sélectionner la durée d'emprunt (7, 14, 21, 30 ou 60 jours)</li>
                             <li>Cliquer "Créer l'Emprunt"</li>
-                            <li>Échéance automatique : 14 jours</li>
                             <li>Le jeu devient indisponible</li>
                         </ol>
                     </div>
@@ -813,6 +814,17 @@ func setupSimpleWebRoutes(router *gin.Engine, gameService *services.GameService,
                             %s
                         </select>
                     </div>
+                    <div>
+                        <label for="duration_days" class="block text-sm font-medium text-gray-700 mb-1">Durée d'emprunt *</label>
+                        <select id="duration_days" name="duration_days" required 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500">
+                            <option value="7">7 jours (1 semaine)</option>
+                            <option value="14" selected>14 jours (2 semaines) - Défaut</option>
+                            <option value="21">21 jours (3 semaines)</option>
+                            <option value="30">30 jours (1 mois)</option>
+                            <option value="60">60 jours (2 mois)</option>
+                        </select>
+                    </div>
                     <div class="flex items-end">
                         <button type="submit" 
                                 class="w-full bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded-md transition-colors">
@@ -1418,8 +1430,9 @@ func setupFormRoutes(router *gin.Engine, gameService *services.GameService, user
 	router.POST("/borrowings/create", func(c *gin.Context) {
 		userIDStr := strings.TrimSpace(c.PostForm("user_id"))
 		gameIDStr := strings.TrimSpace(c.PostForm("game_id"))
+		durationDaysStr := strings.TrimSpace(c.PostForm("duration_days"))
 		
-		if userIDStr == "" || gameIDStr == "" {
+		if userIDStr == "" || gameIDStr == "" || durationDaysStr == "" {
 			c.Header("Content-Type", "text/html")
 			c.String(http.StatusBadRequest, `
 <!DOCTYPE html>
@@ -1434,7 +1447,7 @@ func setupFormRoutes(router *gin.Engine, gameService *services.GameService, user
     <div class="container mx-auto px-4 py-8">
         <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
             <h1 class="text-3xl font-bold text-red-600 mb-4">❌ Erreur</h1>
-            <p class="text-gray-600 mb-4">Veuillez sélectionner un utilisateur et un jeu.</p>
+            <p class="text-gray-600 mb-4">Veuillez sélectionner un utilisateur, un jeu et une durée d'emprunt.</p>
             <a href="/borrowings" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">← Retour aux Emprunts</a>
         </div>
     </div>
@@ -1492,8 +1505,35 @@ func setupFormRoutes(router *gin.Engine, gameService *services.GameService, user
 </html>`)
 			return
 		}
-		
-		borrowing, err := borrowingService.BorrowGameWithDefaultDueDate(userID, gameID)
+
+		durationDays, err := strconv.Atoi(durationDaysStr)
+		if err != nil || durationDays <= 0 {
+			c.Header("Content-Type", "text/html")
+			c.String(http.StatusBadRequest, `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Erreur - Bibliothèque de Jeux de Société</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-6">
+            <h1 class="text-3xl font-bold text-red-600 mb-4">❌ Erreur</h1>
+            <p class="text-gray-600 mb-4">Durée d'emprunt invalide.</p>
+            <a href="/borrowings" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">← Retour aux Emprunts</a>
+        </div>
+    </div>
+</body>
+</html>`)
+			return
+		}
+
+		// Calculer la date d'échéance
+		dueDate := time.Now().Add(time.Duration(durationDays) * 24 * time.Hour)
+		borrowing, err := borrowingService.BorrowGame(userID, gameID, dueDate)
 		if err != nil {
 			c.Header("Content-Type", "text/html")
 			c.String(http.StatusInternalServerError, `
@@ -1542,6 +1582,7 @@ func setupFormRoutes(router *gin.Engine, gameService *services.GameService, user
                     <li><strong>Jeu :</strong> %d</li>
                     <li><strong>Date d'emprunt :</strong> %s</li>
                     <li><strong>Date d'échéance :</strong> %s</li>
+                    <li><strong>Durée :</strong> %d jours</li>
                 </ul>
             </div>
             <p class="text-sm text-gray-500 mb-4">Vous serez redirigé vers la page des emprunts dans 3 secondes...</p>
@@ -1549,7 +1590,7 @@ func setupFormRoutes(router *gin.Engine, gameService *services.GameService, user
         </div>
     </div>
 </body>
-</html>`, borrowing.ID, borrowing.UserID, borrowing.GameID, borrowing.BorrowedAt.Format("2006-01-02 15:04"), borrowing.DueDate.Format("2006-01-02"))
+</html>`, borrowing.ID, borrowing.UserID, borrowing.GameID, borrowing.BorrowedAt.Format("2006-01-02 15:04"), borrowing.DueDate.Format("2006-01-02"), durationDays)
 	})
 
 	// Return borrowing

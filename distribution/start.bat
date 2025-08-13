@@ -17,7 +17,7 @@ echo 🌐 Interfaces disponibles :
 echo    - Page d'accueil : http://localhost:8080/
 echo    - Jeux : http://localhost:8080/games
 echo    - Utilisateurs : http://localhost:8080/users
-echo    - Emprunts : http://localhost:8080/borrowings
+echo    - Emprunts : http://localhost:8080/borrowings (avec durée personnalisable)
 echo    - Alertes : http://localhost:8080/alerts
 echo    - Guide : http://localhost:8080/guide
 echo    - API Swagger : http://localhost:8080/swagger/index.html

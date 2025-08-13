@@ -45,7 +45,7 @@ Une fois démarrée, l'application est accessible à :
 | 🏠 **Accueil** | http://localhost:8080/ | Page principale avec navigation |
 | 🎲 **Jeux** | http://localhost:8080/games | Gestion de la collection de jeux |
 | 👥 **Utilisateurs** | http://localhost:8080/users | Gestion des membres |
-| 📚 **Emprunts** | http://localhost:8080/borrowings | Suivi des prêts de jeux |
+| 📚 **Emprunts** | http://localhost:8080/borrowings | Suivi des prêts avec durée personnalisable |
 | 🚨 **Alertes** | http://localhost:8080/alerts | Notifications et rappels |
 | 📖 **Guide** | http://localhost:8080/guide | Guide d'utilisation complet |
 | 🔧 **API Swagger** | http://localhost:8080/swagger/index.html | Documentation API |
@@ -89,7 +89,7 @@ En cas de problème avec la base de données :
 ### 🎯 **Fonctionnalités Principales**
 
 - ✅ **Gestion complète** de la collection de jeux
-- ✅ **Suivi des emprunts** avec échéances automatiques
+- ✅ **Suivi des emprunts** avec durée personnalisable (7 à 60 jours)
 - ✅ **Système d'alertes** intelligent
 - ✅ **Interface web** intuitive en français
 - ✅ **API REST** complète avec documentation Swagger
