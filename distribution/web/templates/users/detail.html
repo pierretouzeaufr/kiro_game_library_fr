@@ -1,0 +1,215 @@
+{{define "content"}}
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="user-detail-modal">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-2/3 xl:w-1/2 shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">User Profile</h3>
+            <button type="button" 
+                    onclick="document.getElementById('user-detail-modal').remove()"
+                    class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- User Info -->
+        <div class="py-4">
+            <div class="flex items-center space-x-4 mb-6">
+                <div class="flex-shrink-0 h-16 w-16">
+                    <div class="h-16 w-16 rounded-full bg-primary-100 flex items-center justify-center">
+                        <span class="text-xl font-medium text-primary-700">{{substr .User.Name 0 2 | upper}}</span>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <h4 class="text-xl font-semibold text-gray-900">{{.User.Name}}</h4>
+                    <p class="text-sm text-gray-500">{{.User.Email}}</p>
+                    <div class="mt-2 flex items-center space-x-4">
+                        {{if .User.IsActive}}
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                            Active
+                        </span>
+                        {{else}}
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                            Inactive
+                        </span>
+                        {{end}}
+                        <span class="text-sm text-gray-500">
+                            Member since {{.User.RegisteredAt.Format "January 2, 2006"}}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex-shrink-0">
+                    <button hx-get="/users/{{.User.ID}}/edit" 
+                            hx-target="#modal-container"
+                            class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                        Edit
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-blue-600">Current Loans</p>
+                            <p class="text-2xl font-semibold text-blue-900">{{.Stats.CurrentLoans}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-green-600">Total Borrowed</p>
+                            <p class="text-2xl font-semibold text-green-900">{{.Stats.TotalBorrowed}}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-red-50 p-4 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm font-medium text-red-600">Overdue Items</p>
+                            <p class="text-2xl font-semibold text-red-900">{{.Stats.OverdueItems}}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Current Borrowings -->
+            {{if .CurrentBorrowings}}
+            <div class="mb-6">
+                <h5 class="text-lg font-medium text-gray-900 mb-3">Current Borrowings</h5>
+                <div class="bg-gray-50 rounded-lg overflow-hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Game</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrowed</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {{range .CurrentBorrowings}}
+                            <tr>
+                                <td class="px-4 py-3 text-sm font-medium text-gray-900">{{.GameName}}</td>
+                                <td class="px-4 py-3 text-sm text-gray-500">{{.BorrowedAt.Format "Jan 2, 2006"}}</td>
+                                <td class="px-4 py-3 text-sm text-gray-500">{{.DueDate.Format "Jan 2, 2006"}}</td>
+                                <td class="px-4 py-3 text-sm">
+                                    {{if .IsOverdue}}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                                        Overdue
+                                    </span>
+                                    {{else}}
+                                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                                        On Time
+                                    </span>
+                                    {{end}}
+                                </td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {{end}}
+
+            <!-- Borrowing History -->
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <h5 class="text-lg font-medium text-gray-900">Borrowing History</h5>
+                    <div class="flex space-x-2">
+                        <select id="history-filter" 
+                                hx-post="/users/{{.User.ID}}/history" 
+                                hx-target="#history-table"
+                                class="text-sm border-gray-300 rounded-md">
+                            <option value="all">All</option>
+                            <option value="returned">Returned</option>
+                            <option value="overdue">Overdue</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="history-table" class="bg-gray-50 rounded-lg overflow-hidden">
+                    {{template "borrowing-history" .}}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}
+
+{{define "borrowing-history"}}
+<table class="min-w-full divide-y divide-gray-200">
+    <thead class="bg-gray-100">
+        <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Game</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Borrowed</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Returned</th>
+            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+        </tr>
+    </thead>
+    <tbody class="bg-white divide-y divide-gray-200">
+        {{range .BorrowingHistory}}
+        <tr class="hover:bg-gray-50">
+            <td class="px-4 py-3 text-sm font-medium text-gray-900">{{.GameName}}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{.BorrowedAt.Format "Jan 2, 2006"}}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">{{.DueDate.Format "Jan 2, 2006"}}</td>
+            <td class="px-4 py-3 text-sm text-gray-500">
+                {{if .ReturnedAt}}
+                {{.ReturnedAt.Format "Jan 2, 2006"}}
+                {{else}}
+                <span class="text-gray-400">Not returned</span>
+                {{end}}
+            </td>
+            <td class="px-4 py-3 text-sm">
+                {{if .ReturnedAt}}
+                    {{if .IsOverdue}}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                        Returned Late
+                    </span>
+                    {{else}}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        Returned On Time
+                    </span>
+                    {{end}}
+                {{else}}
+                    {{if .IsOverdue}}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                        Overdue
+                    </span>
+                    {{else}}
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                        Active
+                    </span>
+                    {{end}}
+                {{end}}
+            </td>
+        </tr>
+        {{else}}
+        <tr>
+            <td colspan="5" class="px-4 py-3 text-center text-sm text-gray-500">
+                No borrowing history found
+            </td>
+        </tr>
+        {{end}}
+    </tbody>
+</table>
+{{end}}

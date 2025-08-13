@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  board-game-library:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - GIN_MODE=release
+    restart: unless-stopped
+    container_name: board-game-library
+
+volumes:
+  data:
