@@ -1,0 +1,263 @@
+{{define "content"}}
+<div class="px-4 py-5 sm:p-6">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="flex-1 min-w-0">
+            <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">
+                Alerts
+            </h2>
+            <p class="mt-1 text-sm text-gray-500">
+                Manage overdue items and upcoming due dates
+            </p>
+        </div>
+        <div class="mt-4 flex space-x-3 md:mt-0 md:ml-4">
+            <button hx-post="/alerts/mark-all-read" 
+                    hx-target="#alerts-container"
+                    hx-confirm="Mark all alerts as read?"
+                    class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                Mark All Read
+            </button>
+            <button hx-post="/alerts/generate" 
+                    hx-target="#alerts-container"
+                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                Refresh Alerts
+            </button>
+        </div>
+    </div>
+
+    <!-- Alert Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div class="bg-red-50 p-4 rounded-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-red-600">Overdue Alerts</p>
+                    <p class="text-2xl font-semibold text-red-900">{{.Stats.OverdueAlerts}}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-yellow-50 p-4 rounded-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-yellow-600">Reminder Alerts</p>
+                    <p class="text-2xl font-semibold text-yellow-900">{{.Stats.ReminderAlerts}}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="flex items-center">
+                <div class="flex-shrink-0">
+                    <svg class="h-8 w-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium text-gray-600">Unread Alerts</p>
+                    <p class="text-2xl font-semibold text-gray-900">{{.Stats.UnreadAlerts}}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter and Search -->
+    <div class="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Search -->
+        <div>
+            <label for="search" class="sr-only">Search alerts</label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input id="search" 
+                       name="search" 
+                       class="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                       placeholder="Search by user or game..." 
+                       type="search"
+                       hx-post="/alerts/search"
+                       hx-trigger="input changed delay:300ms, search"
+                       hx-target="#alerts-container">
+            </div>
+        </div>
+        
+        <!-- Type Filter -->
+        <div>
+            <label for="type" class="sr-only">Filter by type</label>
+            <select id="type" 
+                    name="type"
+                    hx-post="/alerts/filter"
+                    hx-trigger="change"
+                    hx-target="#alerts-container"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                <option value="all">All Types</option>
+                <option value="overdue">Overdue</option>
+                <option value="reminder">Reminder</option>
+            </select>
+        </div>
+
+        <!-- Status Filter -->
+        <div>
+            <label for="status" class="sr-only">Filter by status</label>
+            <select id="status" 
+                    name="status"
+                    hx-post="/alerts/filter"
+                    hx-trigger="change"
+                    hx-target="#alerts-container"
+                    class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm">
+                <option value="all">All Alerts</option>
+                <option value="unread">Unread Only</option>
+                <option value="read">Read Only</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Alerts Container -->
+    <div id="alerts-container" 
+         hx-get="/alerts" 
+         hx-trigger="refresh-alerts from:body"
+         hx-swap="innerHTML">
+        {{template "alerts-list" .}}
+    </div>
+</div>
+
+<!-- Modal Container -->
+<div id="modal-container"></div>
+{{end}}
+
+{{define "alerts-list"}}
+<!-- Group by User -->
+{{if .GroupedAlerts}}
+<div class="space-y-6">
+    {{range $userID, $userAlerts := .GroupedAlerts}}
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <!-- User Header -->
+        <div class="bg-gray-50 px-4 py-3 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0 h-10 w-10">
+                        <div class="h-10 w-10 rounded-full bg-primary-100 flex items-center justify-center">
+                            <span class="text-sm font-medium text-primary-700">{{substr (index $userAlerts 0).UserName 0 2 | upper}}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-900">{{(index $userAlerts 0).UserName}}</h3>
+                        <p class="text-sm text-gray-500">{{(index $userAlerts 0).UserEmail}}</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {{len $userAlerts}} alerts
+                    </span>
+                    <button hx-post="/alerts/mark-user-read/{{$userID}}" 
+                            hx-target="#alerts-container"
+                            class="text-sm text-primary-600 hover:text-primary-900">
+                        Mark all read
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Alerts -->
+        <div class="divide-y divide-gray-200">
+            {{range $userAlerts}}
+            <div class="px-4 py-4 {{if not .IsRead}}bg-blue-50{{end}}">
+                <div class="flex items-start space-x-3">
+                    <div class="flex-shrink-0">
+                        {{if eq .Type "overdue"}}
+                        <div class="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
+                            <svg class="h-4 w-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        {{else}}
+                        <div class="h-8 w-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                            <svg class="h-4 w-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        {{end}}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-start justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm font-medium text-gray-900">{{.GameName}}</p>
+                                <p class="text-sm text-gray-600 mt-1">{{.Message}}</p>
+                                <div class="flex items-center mt-2 space-x-4 text-xs text-gray-500">
+                                    <span>{{.CreatedAt.Format "Jan 2, 2006 at 3:04 PM"}}</span>
+                                    {{if eq .Type "overdue"}}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                        Overdue
+                                    </span>
+                                    {{else}}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Reminder
+                                    </span>
+                                    {{end}}
+                                </div>
+                            </div>
+                            <div class="flex items-center space-x-2 ml-4">
+                                {{if not .IsRead}}
+                                <button hx-post="/alerts/{{.ID}}/mark-read" 
+                                        hx-target="#alerts-container"
+                                        class="text-xs text-primary-600 hover:text-primary-900">
+                                    Mark read
+                                </button>
+                                {{end}}
+                                <button hx-get="/borrowings/{{.BorrowingID}}" 
+                                        hx-target="#modal-container"
+                                        class="text-xs text-gray-600 hover:text-gray-900">
+                                    View borrowing
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+</div>
+{{else}}
+<!-- No Alerts -->
+<div class="text-center py-12">
+    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5-5-5h5v-5a7.5 7.5 0 00-15 0v5h5l-5 5-5-5h5V7a9.5 9.5 0 0119 0v10z"/>
+    </svg>
+    <h3 class="mt-2 text-sm font-medium text-gray-900">No alerts</h3>
+    <p class="mt-1 text-sm text-gray-500">
+        {{if .HasFilters}}
+        No alerts match your current filters.
+        {{else}}
+        Great! All items are returned on time.
+        {{end}}
+    </p>
+    {{if .HasFilters}}
+    <div class="mt-6">
+        <button hx-get="/alerts" 
+                hx-target="#alerts-container"
+                class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+            Clear filters
+        </button>
+    </div>
+    {{end}}
+</div>
+{{end}}
+{{end}}

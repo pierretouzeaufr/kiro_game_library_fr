@@ -1,0 +1,238 @@
+{{define "content"}}
+<!-- Modal Overlay -->
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" id="borrowing-detail-modal">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-2/3 lg:w-1/2 shadow-lg rounded-md bg-white max-h-screen overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900">Borrowing Details</h3>
+            <button type="button" 
+                    onclick="document.getElementById('borrowing-detail-modal').remove()"
+                    class="text-gray-400 hover:text-gray-600">
+                <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Borrowing Info -->
+        <div class="py-4">
+            <!-- Status Banner -->
+            <div class="mb-6 p-4 rounded-lg {{if .Borrowing.ReturnedAt}}bg-green-50{{else if .Borrowing.IsOverdue}}bg-red-50{{else if .Borrowing.DueSoon}}bg-yellow-50{{else}}bg-blue-50{{end}}">
+                <div class="flex items-center justify-between">
+                    <div>
+                        {{if .Borrowing.ReturnedAt}}
+                        <h4 class="text-sm font-medium text-green-800">Game Returned</h4>
+                        <p class="text-sm text-green-600">
+                            Returned on {{.Borrowing.ReturnedAt.Format "January 2, 2006"}}
+                            {{if .Borrowing.IsOverdue}}(Late return){{else}}(On time){{end}}
+                        </p>
+                        {{else if .Borrowing.IsOverdue}}
+                        <h4 class="text-sm font-medium text-red-800">Overdue</h4>
+                        <p class="text-sm text-red-600">
+                            This game is {{.Borrowing.DaysOverdue}} days overdue
+                        </p>
+                        {{else if .Borrowing.DueSoon}}
+                        <h4 class="text-sm font-medium text-yellow-800">Due Soon</h4>
+                        <p class="text-sm text-yellow-600">
+                            Due in {{.Borrowing.DaysUntilDue}} days
+                        </p>
+                        {{else}}
+                        <h4 class="text-sm font-medium text-blue-800">Active Borrowing</h4>
+                        <p class="text-sm text-blue-600">
+                            Due on {{.Borrowing.DueDate.Format "January 2, 2006"}}
+                        </p>
+                        {{end}}
+                    </div>
+                    <div class="flex space-x-2">
+                        {{if not .Borrowing.ReturnedAt}}
+                        <button hx-get="/borrowings/{{.Borrowing.ID}}/extend" 
+                                hx-target="#modal-container"
+                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                            <span class="htmx-indicator">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                            Extend Due Date
+                        </button>
+                        <button hx-post="/borrowings/{{.Borrowing.ID}}/return" 
+                                hx-target="#modal-container"
+                                hx-confirm="Are you sure you want to mark this game as returned?"
+                                class="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <span class="htmx-indicator">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </span>
+                            Mark as Returned
+                        </button>
+                        {{end}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Borrowing Details Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <!-- User Info -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h5 class="text-sm font-medium text-gray-900 mb-3">Borrower Information</h5>
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0 h-12 w-12">
+                            <div class="h-12 w-12 rounded-full bg-primary-100 flex items-center justify-center">
+                                <span class="text-sm font-medium text-primary-700">{{substr .Borrowing.UserName 0 2 | upper}}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{.Borrowing.UserName}}</p>
+                            <p class="text-sm text-gray-500">{{.Borrowing.UserEmail}}</p>
+                            <button hx-get="/users/{{.Borrowing.UserID}}" 
+                                    hx-target="#modal-container"
+                                    class="text-xs text-primary-600 hover:text-primary-900">
+                                View Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Game Info -->
+                <div class="bg-gray-50 p-4 rounded-lg">
+                    <h5 class="text-sm font-medium text-gray-900 mb-3">Game Information</h5>
+                    <div class="flex items-center space-x-3">
+                        <div class="flex-shrink-0 h-12 w-12">
+                            <div class="h-12 w-12 rounded bg-primary-100 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">{{.Borrowing.GameName}}</p>
+                            {{if .Borrowing.GameCategory}}<p class="text-sm text-gray-500">{{.Borrowing.GameCategory}}</p>{{end}}
+                            <button hx-get="/games/{{.Borrowing.GameID}}" 
+                                    hx-target="#modal-container"
+                                    class="text-xs text-primary-600 hover:text-primary-900">
+                                View Game
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="mb-6">
+                <h5 class="text-sm font-medium text-gray-900 mb-3">Timeline</h5>
+                <div class="flow-root">
+                    <ul class="-mb-8">
+                        <!-- Borrowed Event -->
+                        <li>
+                            <div class="relative pb-8">
+                                <span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                                <div class="relative flex space-x-3">
+                                    <div>
+                                        <span class="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center ring-8 ring-white">
+                                            <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500">Game borrowed by <span class="font-medium text-gray-900">{{.Borrowing.UserName}}</span></p>
+                                        </div>
+                                        <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                            {{.Borrowing.BorrowedAt.Format "Jan 2, 2006 at 3:04 PM"}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+
+                        <!-- Due Date Event -->
+                        <li>
+                            <div class="relative pb-8">
+                                {{if not .Borrowing.ReturnedAt}}<span class="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>{{end}}
+                                <div class="relative flex space-x-3">
+                                    <div>
+                                        <span class="h-8 w-8 rounded-full {{if .Borrowing.IsOverdue}}bg-red-500{{else if .Borrowing.DueSoon}}bg-yellow-500{{else}}bg-gray-400{{end}} flex items-center justify-center ring-8 ring-white">
+                                            <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500">
+                                                Due date 
+                                                {{if .Borrowing.IsOverdue}}
+                                                <span class="font-medium text-red-600">({{.Borrowing.DaysOverdue}} days overdue)</span>
+                                                {{else if .Borrowing.DueSoon}}
+                                                <span class="font-medium text-yellow-600">(due in {{.Borrowing.DaysUntilDue}} days)</span>
+                                                {{end}}
+                                            </p>
+                                        </div>
+                                        <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                            {{.Borrowing.DueDate.Format "Jan 2, 2006"}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+
+                        <!-- Return Event (if returned) -->
+                        {{if .Borrowing.ReturnedAt}}
+                        <li>
+                            <div class="relative">
+                                <div class="relative flex space-x-3">
+                                    <div>
+                                        <span class="h-8 w-8 rounded-full bg-green-500 flex items-center justify-center ring-8 ring-white">
+                                            <svg class="h-4 w-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </span>
+                                    </div>
+                                    <div class="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                        <div>
+                                            <p class="text-sm text-gray-500">
+                                                Game returned 
+                                                {{if .Borrowing.IsOverdue}}
+                                                <span class="font-medium text-red-600">(late)</span>
+                                                {{else}}
+                                                <span class="font-medium text-green-600">(on time)</span>
+                                                {{end}}
+                                            </p>
+                                        </div>
+                                        <div class="text-right text-sm whitespace-nowrap text-gray-500">
+                                            {{.Borrowing.ReturnedAt.Format "Jan 2, 2006 at 3:04 PM"}}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        {{end}}
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Additional Details -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                    <span class="font-medium text-gray-500">Borrowing ID:</span>
+                    <span class="text-gray-900">#{{.Borrowing.ID}}</span>
+                </div>
+                <div>
+                    <span class="font-medium text-gray-500">Duration:</span>
+                    <span class="text-gray-900">{{.Borrowing.Duration}} days</span>
+                </div>
+                {{if .Borrowing.Notes}}
+                <div class="md:col-span-2">
+                    <span class="font-medium text-gray-500">Notes:</span>
+                    <p class="text-gray-900 mt-1">{{.Borrowing.Notes}}</p>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
+</div>
+{{end}}

@@ -1,0 +1,94 @@
+basePath: /api/v1
+definitions:
+  handlers.AddGameRequest:
+    properties:
+      category:
+        type: string
+      condition:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@swagger.io
+    name: Support API
+    url: http://www.swagger.io/support
+  description: API pour la gestion d'une bibliothèque de jeux de société
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Board Game Library API
+  version: "1.0"
+paths:
+  /games:
+    get:
+      consumes:
+      - application/json
+      description: Récupère la liste de tous les jeux avec recherche optionnelle
+      parameters:
+      - description: Terme de recherche
+        in: query
+        name: search
+        type: string
+      - description: Filtrer par disponibilité
+        in: query
+        name: available
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Liste des jeux
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Erreur serveur
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Lister tous les jeux
+      tags:
+      - games
+    post:
+      consumes:
+      - application/json
+      description: Ajoute un nouveau jeu à la bibliothèque
+      parameters:
+      - description: Informations du jeu
+        in: body
+        name: game
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.AddGameRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Jeu créé avec succès
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Données invalides
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Erreur serveur
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Ajouter un nouveau jeu
+      tags:
+      - games
+schemes:
+- http
+swagger: "2.0"

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Interface - Bibliothèque de Jeux</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .link { display: inline-block; margin: 10px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
+        .link:hover { background: #0056b3; }
+        .api-link { background: #28a745; }
+        .api-link:hover { background: #1e7e34; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎲 Test Interface - Bibliothèque de Jeux de Société</h1>
+        
+        <div class="section">
+            <h2>🌐 Interfaces Web (HTML)</h2>
+            <p>Ces liens ouvrent les interfaces graphiques complètes :</p>
+            <a href="http://localhost:8081/" class="link">🏠 Accueil</a>
+            <a href="http://localhost:8081/games" class="link">🎲 Jeux</a>
+            <a href="http://localhost:8081/users" class="link">👥 Utilisateurs</a>
+            <a href="http://localhost:8081/borrowings" class="link">📚 Emprunts</a>
+            <a href="http://localhost:8081/alerts" class="link">🚨 Alertes</a>
+        </div>
+
+        <div class="section">
+            <h2>🔌 API REST (JSON)</h2>
+            <p>Ces liens retournent des données JSON :</p>
+            <a href="http://localhost:8081/api/v1/games" class="link api-link">API Jeux</a>
+            <a href="http://localhost:8081/api/v1/users" class="link api-link">API Utilisateurs</a>
+            <a href="http://localhost:8081/api/v1/alerts" class="link api-link">API Alertes</a>
+        </div>
+
+        <div class="section">
+            <h2>📝 Instructions</h2>
+            <ol>
+                <li>Assurez-vous que le serveur est démarré : <code>./bin/server</code></li>
+                <li>Cliquez sur les liens "Interfaces Web" pour voir les interfaces graphiques</li>
+                <li>Les liens "API REST" retournent du JSON brut</li>
+                <li>L'interface des alertes est à : <strong>http://localhost:8081/alerts</strong></li>
+            </ol>
+        </div>
+
+        <div class="section">
+            <h2>🚨 Interface des Alertes</h2>
+            <p>L'interface des alertes comprend :</p>
+            <ul>
+                <li>✅ Liste des alertes actives avec icônes colorées</li>
+                <li>✅ Formulaire de création d'alertes personnalisées</li>
+                <li>✅ Actions rapides (génération automatique, nettoyage)</li>
+                <li>✅ Boutons pour marquer comme lue ou supprimer</li>
+                <li>✅ Affichage des noms complets (utilisateurs et jeux)</li>
+            </ul>
+            <p><strong>URL directe :</strong> <a href="http://localhost:8081/alerts" class="link">http://localhost:8081/alerts</a></p>
+        </div>
+    </div>
+</body>
+</html>
