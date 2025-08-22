@@ -245,3 +245,8 @@ func (a *App) GetLogger() *logging.Logger {
 func (a *App) GetConfig() *config.Config {
 	return a.config
 }
+
+// GetRouter returns the Gin router (for use by serverless handlers)
+func (a *App) GetRouter() *gin.Engine {
+	return a.router
+}

@@ -1,0 +1,11 @@
+node_modules
+.git
+*.log
+data/
+bin/
+distribution/
+distribution 2/
+*.exe
+*.tar.gz
+test-*.html
+guide-utilisateur.html
