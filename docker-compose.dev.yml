@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  board-game-library-dev:
+    build: 
+      context: .
+      target: builder
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - GIN_MODE=debug
+      - DATABASE_PATH=/app/data/library.db
+      - SERVER_PORT=8080
+      - LOG_LEVEL=debug
+    working_dir: /app
+    command: go run ./cmd/server
+    container_name: board-game-library-dev
+    restart: unless-stopped

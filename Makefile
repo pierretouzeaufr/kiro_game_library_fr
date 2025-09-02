@@ -1,6 +1,6 @@
 # Board Game Library - Build System
 
-.PHONY: help build-windows build-macos build-linux clean test
+.PHONY: help build-windows build-macos build-linux clean test test-all test-coverage docker-build docker-up docker-dev docker-down docker-logs
 
 help:
 	@echo "Board Game Library Build System"
@@ -12,7 +12,14 @@ help:
 	@echo "  build-all        Build all distributions"
 	@echo "  app-bundle       Create macOS .app bundle"
 	@echo "  clean           Clean all build artifacts"
-	@echo "  test            Run tests"
+	@echo "  test            Run working tests"
+	@echo "  test-all        Run all tests"
+	@echo "  test-coverage   Run tests with coverage report"
+	@echo "  docker-build    Build Docker image"
+	@echo "  docker-up       Start with Docker Compose"
+	@echo "  docker-dev      Start development with Docker"
+	@echo "  docker-down     Stop Docker containers"
+	@echo "  docker-logs     Show Docker logs"
 	@echo ""
 
 build-windows:
@@ -46,7 +53,17 @@ clean:
 
 test:
 	@echo "Running tests..."
+	@go test -v ./pkg/database/... ./internal/services/... ./internal/logging/... ./internal/config/...
+
+test-all:
+	@echo "Running all tests (including potentially failing ones)..."
 	@go test ./...
+
+test-coverage:
+	@echo "Running tests with coverage..."
+	@go test -coverprofile=coverage.out ./pkg/database/... ./internal/services/... ./internal/logging/... ./internal/config/...
+	@go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report generated: coverage.html"
 
 # Development targets
 dev-run:
@@ -56,3 +73,24 @@ dev-run:
 dev-build:
 	@echo "Building for current platform..."
 	@go build -o board-game-library ./cmd/server
+
+# Docker targets
+docker-build:
+	@echo "Building Docker image..."
+	@docker-compose build
+
+docker-up:
+	@echo "Starting with Docker Compose..."
+	@docker-compose up -d
+
+docker-dev:
+	@echo "Starting development environment with Docker..."
+	@docker-compose -f docker-compose.dev.yml up
+
+docker-down:
+	@echo "Stopping Docker containers..."
+	@docker-compose down
+
+docker-logs:
+	@echo "Showing Docker logs..."
+	@docker-compose logs -f

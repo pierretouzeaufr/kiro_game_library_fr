@@ -1,0 +1,43 @@
+# Build artifacts
+board-game-library
+board-game-library.exe
+*.exe
+dist/
+windows-dist/
+macos-dist/
+linux-dist/
+*.app
+
+# Development files
+.git/
+.gitignore
+.DS_Store
+.vscode/
+.kiro/
+
+# Build scripts
+build/
+build-all.sh
+Makefile
+
+# Documentation and tests
+README.md
+GUIDE_UTILISATEUR.md
+*.html
+tests/
+
+# Data and logs
+data/
+*.db
+*.log
+
+# Archives
+*.tar.gz
+*.zip
+
+# Node modules (if any)
+node_modules/
+
+# Temporary files
+tmp/
+temp/

@@ -234,6 +234,23 @@ func TestAlertGenerationIntegration(t *testing.T) {
 			t.Skip("Skipping performance test in short mode")
 		}
 
+		// Use separate database for this test to avoid interference
+		perfDB, err := database.InitializeForTesting()
+		require.NoError(t, err)
+		defer perfDB.Close()
+
+		// Initialize repositories for performance test
+		perfUserRepo := repositories.NewSQLiteUserRepository(perfDB)
+		perfGameRepo := repositories.NewSQLiteGameRepository(perfDB)
+		perfBorrowingRepo := repositories.NewSQLiteBorrowingRepository(perfDB)
+		perfAlertRepo := repositories.NewSQLiteAlertRepository(perfDB)
+
+		// Initialize services for performance test
+		perfUserService := services.NewUserService(perfUserRepo, perfBorrowingRepo)
+		perfGameService := services.NewGameService(perfGameRepo, perfBorrowingRepo)
+		perfBorrowingService := services.NewBorrowingService(perfBorrowingRepo, perfUserRepo, perfGameRepo)
+		perfAlertService := services.NewAlertService(perfAlertRepo, perfBorrowingRepo, perfUserRepo, perfGameRepo)
+
 		const numBorrowings = 100
 
 		var users []*models.User
@@ -241,14 +258,14 @@ func TestAlertGenerationIntegration(t *testing.T) {
 
 		// Create users and games
 		for i := 0; i < numBorrowings; i++ {
-			user, err := userService.RegisterUser(
+			user, err := perfUserService.RegisterUser(
 				fmt.Sprintf("Perf User %d", i),
 				fmt.Sprintf("perf%d@example.com", i),
 			)
 			require.NoError(t, err)
 			users = append(users, user)
 
-			game, err := gameService.AddGame(
+			game, err := perfGameService.AddGame(
 				fmt.Sprintf("Perf Game %d", i),
 				fmt.Sprintf("Performance game %d", i),
 				"Performance",
@@ -260,26 +277,26 @@ func TestAlertGenerationIntegration(t *testing.T) {
 
 		// Create overdue borrowings
 		for i := 0; i < numBorrowings; i++ {
-			borrowing, err := borrowingService.BorrowGame(users[i].ID, games[i].ID, time.Now().Add(14*24*time.Hour))
+			borrowing, err := perfBorrowingService.BorrowGame(users[i].ID, games[i].ID, time.Now().Add(14*24*time.Hour))
 			require.NoError(t, err)
 
 			// Manually update to be overdue (simulating time passage)
 			borrowing.DueDate = time.Now().Add(-2 * 24 * time.Hour)
 			borrowing.IsOverdue = true
-			err = borrowingRepo.Update(borrowing)
+			err = perfBorrowingRepo.Update(borrowing)
 			require.NoError(t, err)
 		}
 
 		// Test alert generation performance
 		start := time.Now()
-		err = alertService.GenerateOverdueAlerts()
+		err = perfAlertService.GenerateOverdueAlerts()
 		duration := time.Since(start)
 		require.NoError(t, err)
 
 		t.Logf("Generated alerts for %d overdue borrowings in %v", numBorrowings, duration)
 
 		// Verify all alerts were created
-		alerts, err := alertService.GetActiveAlerts()
+		alerts, err := perfAlertService.GetActiveAlerts()
 		require.NoError(t, err)
 		
 		overdueAlerts := 0
@@ -295,46 +312,63 @@ func TestAlertGenerationIntegration(t *testing.T) {
 	})
 
 	t.Run("Alert Cleanup and Management", func(t *testing.T) {
+		// Use separate database for this test to avoid interference
+		cleanupDB, err := database.InitializeForTesting()
+		require.NoError(t, err)
+		defer cleanupDB.Close()
+
+		// Initialize repositories for cleanup test
+		cleanupUserRepo := repositories.NewSQLiteUserRepository(cleanupDB)
+		cleanupGameRepo := repositories.NewSQLiteGameRepository(cleanupDB)
+		cleanupBorrowingRepo := repositories.NewSQLiteBorrowingRepository(cleanupDB)
+		cleanupAlertRepo := repositories.NewSQLiteAlertRepository(cleanupDB)
+
+		// Initialize services for cleanup test
+		cleanupUserService := services.NewUserService(cleanupUserRepo, cleanupBorrowingRepo)
+		cleanupGameService := services.NewGameService(cleanupGameRepo, cleanupBorrowingRepo)
+		cleanupBorrowingService := services.NewBorrowingService(cleanupBorrowingRepo, cleanupUserRepo, cleanupGameRepo)
+		cleanupAlertService := services.NewAlertService(cleanupAlertRepo, cleanupBorrowingRepo, cleanupUserRepo, cleanupGameRepo)
+
 		// Create test data
-		user, err := userService.RegisterUser("Cleanup User", "cleanup@example.com")
+		user, err := cleanupUserService.RegisterUser("Cleanup User", "cleanup@example.com")
 		require.NoError(t, err)
 
-		game, err := gameService.AddGame("Cleanup Game", "A game for cleanup testing", "Test", "good")
+		game, err := cleanupGameService.AddGame("Cleanup Game", "A game for cleanup testing", "Test", "good")
 		require.NoError(t, err)
 
 		// Create and return a borrowing to test alert lifecycle
-		borrowing, err := borrowingService.BorrowGame(user.ID, game.ID, time.Now().Add(14*24*time.Hour))
+		borrowing, err := cleanupBorrowingService.BorrowGame(user.ID, game.ID, time.Now().Add(14*24*time.Hour))
 		require.NoError(t, err)
 		
 		// Manually update to be overdue
 		borrowing.DueDate = time.Now().Add(-1 * 24 * time.Hour)
 		borrowing.IsOverdue = true
-		err = borrowingRepo.Update(borrowing)
+		err = cleanupBorrowingRepo.Update(borrowing)
 		require.NoError(t, err)
 
-		err = alertService.GenerateOverdueAlerts()
+		err = cleanupAlertService.GenerateOverdueAlerts()
 		require.NoError(t, err)
 
 		// Verify alert exists
-		alerts, err := alertService.GetActiveAlerts()
+		alerts, err := cleanupAlertService.GetActiveAlerts()
 		require.NoError(t, err)
 		assert.Len(t, alerts, 1)
 
 		// Return the game
-		err = borrowingService.ReturnGame(borrowing.ID)
+		err = cleanupBorrowingService.ReturnGame(borrowing.ID)
 		require.NoError(t, err)
 
 		// Alert should still exist but can be cleaned up if needed
-		finalAlerts, err := alertService.GetActiveAlerts()
+		finalAlerts, err := cleanupAlertService.GetActiveAlerts()
 		require.NoError(t, err)
 		assert.Len(t, finalAlerts, 1)
 
 		// Test manual alert deletion
-		err = alertRepo.Delete(finalAlerts[0].ID)
+		err = cleanupAlertRepo.Delete(finalAlerts[0].ID)
 		require.NoError(t, err)
 
 		// Verify alert is deleted
-		deletedAlerts, err := alertService.GetActiveAlerts()
+		deletedAlerts, err := cleanupAlertService.GetActiveAlerts()
 		require.NoError(t, err)
 		assert.Len(t, deletedAlerts, 0)
 	})
@@ -360,57 +394,81 @@ func TestAdvancedAlertScenarios(t *testing.T) {
 	alertService := services.NewAlertService(alertRepo, borrowingRepo, userRepo, gameRepo)
 
 	t.Run("Mixed Alert Types for Same User", func(t *testing.T) {
-		// Create user and games
-		user, err := userService.RegisterUser("Mixed Alert User", "mixed@example.com")
+		// Use separate database for this test to avoid interference
+		mixedDB, err := database.InitializeForTesting()
+		require.NoError(t, err)
+		defer mixedDB.Close()
+
+		// Initialize repositories for mixed test
+		mixedUserRepo := repositories.NewSQLiteUserRepository(mixedDB)
+		mixedGameRepo := repositories.NewSQLiteGameRepository(mixedDB)
+		mixedBorrowingRepo := repositories.NewSQLiteBorrowingRepository(mixedDB)
+		mixedAlertRepo := repositories.NewSQLiteAlertRepository(mixedDB)
+
+		// Initialize services for mixed test
+		mixedUserService := services.NewUserService(mixedUserRepo, mixedBorrowingRepo)
+		mixedGameService := services.NewGameService(mixedGameRepo, mixedBorrowingRepo)
+		mixedBorrowingService := services.NewBorrowingService(mixedBorrowingRepo, mixedUserRepo, mixedGameRepo)
+		mixedAlertService := services.NewAlertService(mixedAlertRepo, mixedBorrowingRepo, mixedUserRepo, mixedGameRepo)
+
+		// Create users and games
+		user1, err := mixedUserService.RegisterUser("Overdue Alert User", "overdue@example.com")
 		require.NoError(t, err)
 
-		game1, err := gameService.AddGame("Overdue Game", "Game that will be overdue", "Test", "good")
+		user2, err := mixedUserService.RegisterUser("Reminder Alert User", "reminder@example.com")
 		require.NoError(t, err)
 
-		game2, err := gameService.AddGame("Reminder Game", "Game that will need reminder", "Test", "good")
+		game1, err := mixedGameService.AddGame("Overdue Game", "Game that will be overdue", "Test", "good")
 		require.NoError(t, err)
 
-		// Create overdue borrowing
-		overdueBorrowing, err := borrowingService.BorrowGame(user.ID, game1.ID, time.Now().Add(14*24*time.Hour))
+		game2, err := mixedGameService.AddGame("Reminder Game", "Game that will need reminder", "Test", "good")
+		require.NoError(t, err)
+
+		// Create overdue borrowing for user1
+		overdueBorrowing, err := mixedBorrowingService.BorrowGame(user1.ID, game1.ID, time.Now().Add(14*24*time.Hour))
 		require.NoError(t, err)
 		
 		// Manually update to be overdue
 		overdueBorrowing.DueDate = time.Now().Add(-3 * 24 * time.Hour)
 		overdueBorrowing.IsOverdue = true
-		err = borrowingRepo.Update(overdueBorrowing)
+		err = mixedBorrowingRepo.Update(overdueBorrowing)
 		require.NoError(t, err)
 
-		// Create reminder borrowing (due in 1 day)
-		_, err = borrowingService.BorrowGame(user.ID, game2.ID, time.Now().Add(1*24*time.Hour))
+		// Create reminder borrowing for user2 (due in 1 day)
+		_, err = mixedBorrowingService.BorrowGame(user2.ID, game2.ID, time.Now().Add(1*24*time.Hour))
 		require.NoError(t, err)
 
 		// Generate both types of alerts
-		err = alertService.GenerateOverdueAlerts()
+		err = mixedAlertService.GenerateOverdueAlerts()
 		require.NoError(t, err)
 
-		err = alertService.GenerateReminderAlerts()
+		err = mixedAlertService.GenerateReminderAlerts()
 		require.NoError(t, err)
 
-		// Verify both alerts exist
-		userAlerts, err := alertService.GetAlertsByUser(user.ID)
+		// Verify alerts exist for both users
+		user1Alerts, err := mixedAlertService.GetAlertsByUser(user1.ID)
 		require.NoError(t, err)
-		assert.Len(t, userAlerts, 2)
+		assert.Len(t, user1Alerts, 1)
+		assert.Equal(t, "overdue", user1Alerts[0].Type)
 
-		// Verify alert types
-		alertTypes := make(map[string]bool)
-		for _, alert := range userAlerts {
-			alertTypes[alert.Type] = true
-		}
-		assert.True(t, alertTypes["overdue"])
-		assert.True(t, alertTypes["reminder"])
+		user2Alerts, err := mixedAlertService.GetAlertsByUser(user2.ID)
+		require.NoError(t, err)
+		assert.Len(t, user2Alerts, 1)
+		assert.Equal(t, "reminder", user2Alerts[0].Type)
 
 		// Test alert summary
-		summary, err := alertService.GetAlertsSummaryByUser()
+		summary, err := mixedAlertService.GetAlertsSummaryByUser()
 		require.NoError(t, err)
-		userSummary := summary[user.ID]
-		assert.Equal(t, 2, userSummary.TotalAlerts)
-		assert.Equal(t, 1, userSummary.OverdueCount)
-		assert.Equal(t, 1, userSummary.ReminderCount)
+		
+		user1Summary := summary[user1.ID]
+		assert.Equal(t, 1, user1Summary.TotalAlerts)
+		assert.Equal(t, 1, user1Summary.OverdueCount)
+		assert.Equal(t, 0, user1Summary.ReminderCount)
+
+		user2Summary := summary[user2.ID]
+		assert.Equal(t, 1, user2Summary.TotalAlerts)
+		assert.Equal(t, 0, user2Summary.OverdueCount)
+		assert.Equal(t, 1, user2Summary.ReminderCount)
 	})
 
 	t.Run("Alert Generation Edge Cases", func(t *testing.T) {
@@ -511,17 +569,39 @@ func TestAdvancedAlertScenarios(t *testing.T) {
 	})
 
 	t.Run("Bulk Alert Operations", func(t *testing.T) {
-		// Test bulk alert operations
-		user, err := userService.RegisterUser("Bulk Alert User", "bulk@example.com")
+		// Use separate database for this test to avoid interference
+		bulkDB, err := database.InitializeForTesting()
 		require.NoError(t, err)
+		defer bulkDB.Close()
 
-		// Create multiple games and borrowings
+		// Initialize repositories for bulk test
+		bulkUserRepo := repositories.NewSQLiteUserRepository(bulkDB)
+		bulkGameRepo := repositories.NewSQLiteGameRepository(bulkDB)
+		bulkBorrowingRepo := repositories.NewSQLiteBorrowingRepository(bulkDB)
+		bulkAlertRepo := repositories.NewSQLiteAlertRepository(bulkDB)
+
+		// Initialize services for bulk test
+		bulkUserService := services.NewUserService(bulkUserRepo, bulkBorrowingRepo)
+		bulkGameService := services.NewGameService(bulkGameRepo, bulkBorrowingRepo)
+		bulkBorrowingService := services.NewBorrowingService(bulkBorrowingRepo, bulkUserRepo, bulkGameRepo)
+		bulkAlertService := services.NewAlertService(bulkAlertRepo, bulkBorrowingRepo, bulkUserRepo, bulkGameRepo)
+
+		// Create multiple users and games for bulk operations
 		const numGames = 5
+		users := make([]*models.User, numGames)
 		games := make([]*models.Game, numGames)
 		borrowings := make([]*models.Borrowing, numGames)
 
 		for i := 0; i < numGames; i++ {
-			game, err := gameService.AddGame(
+			// Create separate user for each borrowing to avoid overdue conflicts
+			user, err := bulkUserService.RegisterUser(
+				fmt.Sprintf("Bulk Alert User %d", i),
+				fmt.Sprintf("bulk%d@example.com", i),
+			)
+			require.NoError(t, err)
+			users[i] = user
+
+			game, err := bulkGameService.AddGame(
 				fmt.Sprintf("Bulk Game %d", i),
 				fmt.Sprintf("Game %d for bulk testing", i),
 				"Bulk",
@@ -531,35 +611,41 @@ func TestAdvancedAlertScenarios(t *testing.T) {
 			games[i] = game
 
 			// Create overdue borrowing
-			borrowing, err := borrowingService.BorrowGame(user.ID, game.ID, time.Now().Add(14*24*time.Hour))
+			borrowing, err := bulkBorrowingService.BorrowGame(user.ID, game.ID, time.Now().Add(14*24*time.Hour))
 			require.NoError(t, err)
 			
 			// Manually update to be overdue
 			borrowing.DueDate = time.Now().Add(-time.Duration(i+1) * 24 * time.Hour)
 			borrowing.IsOverdue = true
-			err = borrowingRepo.Update(borrowing)
+			err = bulkBorrowingRepo.Update(borrowing)
 			require.NoError(t, err)
 			borrowings[i] = borrowing
 		}
 
 		// Generate alerts for all overdue items
-		err = alertService.GenerateOverdueAlerts()
+		err = bulkAlertService.GenerateOverdueAlerts()
 		require.NoError(t, err)
 
 		// Verify all alerts were created
-		userAlerts, err := alertService.GetAlertsByUser(user.ID)
+		allAlerts, err := bulkAlertService.GetActiveAlerts()
 		require.NoError(t, err)
-		assert.Len(t, userAlerts, numGames)
+		assert.Len(t, allAlerts, numGames)
 
-		// Test bulk mark as read
-		err = alertService.MarkAllUserAlertsAsRead(user.ID)
+		// Test bulk mark as read for first user
+		firstUser := users[0]
+		err = bulkAlertService.MarkAllUserAlertsAsRead(firstUser.ID)
 		require.NoError(t, err)
 
-		// Verify all alerts are marked as read
-		updatedAlerts, err := alertService.GetAlertsByUser(user.ID)
+		// Verify first user's alerts are marked as read
+		firstUserAlerts, err := bulkAlertService.GetAlertsByUser(firstUser.ID)
 		require.NoError(t, err)
-		for _, alert := range updatedAlerts {
-			assert.True(t, alert.IsRead, "Alert %d should be marked as read", alert.ID)
-		}
+		assert.Len(t, firstUserAlerts, 1)
+		assert.True(t, firstUserAlerts[0].IsRead, "Alert should be marked as read")
+
+		// Verify other users' alerts are still unread
+		secondUserAlerts, err := bulkAlertService.GetAlertsByUser(users[1].ID)
+		require.NoError(t, err)
+		assert.Len(t, secondUserAlerts, 1)
+		assert.False(t, secondUserAlerts[0].IsRead, "Alert should still be unread")
 	})
 }

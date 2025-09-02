@@ -171,12 +171,13 @@ func TestOverdueWorkflow(t *testing.T) {
 		game, err := gameService.AddGame("Test Game", "A test game", "Test", "good")
 		require.NoError(t, err)
 
-		// Step 2: Create an overdue borrowing (due date in the past)
-		pastDueDate := time.Now().Add(-2 * 24 * time.Hour) // 2 days overdue
-		borrowing, err := borrowingService.BorrowGame(user.ID, game.ID, pastDueDate)
+		// Step 2: Create a borrowing with future due date, then make it overdue
+		futureDueDate := time.Now().Add(14 * 24 * time.Hour) // Initially 14 days in future
+		borrowing, err := borrowingService.BorrowGame(user.ID, game.ID, futureDueDate)
 		require.NoError(t, err)
 
 		// Step 3: Manually update the borrowing to be overdue (simulating time passage)
+		borrowing.DueDate = time.Now().Add(-2 * 24 * time.Hour) // 2 days overdue
 		borrowing.IsOverdue = true
 		err = borrowingRepo.Update(borrowing)
 		require.NoError(t, err)
@@ -486,12 +487,13 @@ func TestCompleteLibraryWorkflow(t *testing.T) {
 		assert.Len(t, activeBorrowings1, 1)
 
 		// Phase 6: Overdue Scenario Simulation
-		// Create an overdue borrowing by setting past due date
-		pastDueDate := time.Now().Add(-2 * 24 * time.Hour)
-		overdueBorrowing, err := borrowingService.BorrowGame(users[2].ID, games[4].ID, pastDueDate)
+		// Create a borrowing with future due date, then make it overdue
+		futureDueDate := time.Now().Add(14 * 24 * time.Hour)
+		overdueBorrowing, err := borrowingService.BorrowGame(users[2].ID, games[4].ID, futureDueDate)
 		require.NoError(t, err)
 
-		// Manually mark as overdue (simulating time passage)
+		// Manually update to be overdue (simulating time passage)
+		overdueBorrowing.DueDate = time.Now().Add(-2 * 24 * time.Hour) // 2 days overdue
 		overdueBorrowing.IsOverdue = true
 		err = borrowingRepo.Update(overdueBorrowing)
 		require.NoError(t, err)
@@ -503,7 +505,7 @@ func TestCompleteLibraryWorkflow(t *testing.T) {
 		// Verify alert was created
 		alerts, err := alertService.GetActiveAlerts()
 		require.NoError(t, err)
-		assert.Len(t, alerts, 1)
+		require.Len(t, alerts, 1, "Should have exactly one overdue alert")
 		assert.Equal(t, "overdue", alerts[0].Type)
 		assert.Equal(t, users[2].ID, alerts[0].UserID)
 
@@ -517,10 +519,11 @@ func TestCompleteLibraryWorkflow(t *testing.T) {
 		err = alertService.MarkAlertAsRead(alerts[0].ID)
 		require.NoError(t, err)
 
-		// Verify alert is marked as read
-		updatedAlerts, err := alertService.GetActiveAlerts()
+		// Verify alert is marked as read by checking user's alerts
+		userAlerts, err := alertService.GetAlertsByUser(users[2].ID)
 		require.NoError(t, err)
-		assert.True(t, updatedAlerts[0].IsRead)
+		require.Len(t, userAlerts, 1, "Should have exactly one alert for user")
+		assert.True(t, userAlerts[0].IsRead)
 
 		// Phase 8: Resolution and Cleanup
 		// Return overdue game
@@ -630,11 +633,12 @@ func TestDataIntegrityWorkflow(t *testing.T) {
 		game, err := gameService.AddGame("Alert Game", "Test game", "Test", "good")
 		require.NoError(t, err)
 
-		// Create overdue borrowing
-		overdueBorrowing, err := borrowingService.BorrowGame(user.ID, game.ID, time.Now().Add(-24*time.Hour))
+		// Create borrowing with future due date, then make it overdue
+		overdueBorrowing, err := borrowingService.BorrowGame(user.ID, game.ID, time.Now().Add(14*24*time.Hour))
 		require.NoError(t, err)
 
-		// Mark as overdue
+		// Manually update to be overdue (simulating time passage)
+		overdueBorrowing.DueDate = time.Now().Add(-24 * time.Hour) // 1 day overdue
 		overdueBorrowing.IsOverdue = true
 		err = borrowingRepo.Update(overdueBorrowing)
 		require.NoError(t, err)

@@ -1,8 +1,8 @@
 # Dockerfile pour la Bibliothèque de Jeux de Société
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
-# Installer les dépendances de build
-RUN apk add --no-cache git
+# Installer les dépendances de build (SQLite nécessite CGO)
+RUN apk add --no-cache git gcc musl-dev sqlite-dev
 
 # Définir le répertoire de travail
 WORKDIR /app
@@ -14,8 +14,8 @@ RUN go mod download
 # Copier le code source
 COPY . .
 
-# Construire l'application
-RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o board-game-library cmd/server/main.go
+# Construire l'application avec CGO pour SQLite
+RUN CGO_ENABLED=1 GOOS=linux go build -a -ldflags="-s -w" -o board-game-library ./cmd/server
 
 # Image finale
 FROM alpine:latest
