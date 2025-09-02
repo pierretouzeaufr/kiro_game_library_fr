@@ -5,6 +5,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"board-game-library/pkg/database"
 )
 
 // Config holds all application configuration
@@ -58,7 +60,7 @@ func Load() (*Config, error) {
 			ShutdownTimeout: getEnvAsDuration("SERVER_SHUTDOWN_TIMEOUT", 30*time.Second),
 		},
 		Database: DatabaseConfig{
-			Path:            getEnv("DATABASE_PATH", "./data/library.db"),
+			Path:            getEnv("DATABASE_PATH", database.GetDefaultDatabasePath()),
 			MaxOpenConns:    getEnvAsInt("DATABASE_MAX_OPEN_CONNS", 1),
 			MaxIdleConns:    getEnvAsInt("DATABASE_MAX_IDLE_CONNS", 1),
 			ConnMaxLifetime: getEnvAsDuration("DATABASE_CONN_MAX_LIFETIME", time.Hour),
